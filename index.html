@@ -3,30 +3,31 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PDF Merge Studio</title>
+<title>PAC Galley Proof Merge Tool</title>
 
-<!-- pdf-lib for client-side PDF merging -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
-
-<!-- Google API client -->
-<script src="https://apis.google.com/js/api.js"></script>
 <script src="https://accounts.google.com/gsi/client"></script>
 
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
 
   :root {
-    --bg: #0d0d0f;
-    --surface: #141416;
-    --surface2: #1c1c20;
-    --border: #2a2a30;
-    --accent: #e8ff47;
-    --accent2: #47c8ff;
-    --text: #f0f0f0;
-    --muted: #666676;
-    --danger: #ff5c5c;
-    --success: #47ff9c;
-    --drive-blue: #4285f4;
+    --bg: #f4f4f4;
+    --surface: #ffffff;
+    --surface2: #f0f4f8;
+    --border: #d0d8e0;
+    --header-blue: #2d6a8f;
+    --navy: #1e3a5f;
+    --green: #b5c95a;
+    --green-dark: #8fa832;
+    --text: #2b2b2b;
+    --muted: #6b7c93;
+    --danger: #c0392b;
+    --danger-bg: rgba(192,57,43,0.06);
+    --success: #2e7d32;
+    --success-bg: rgba(46,125,50,0.06);
+    --warning: #b45309;
+    --warning-bg: rgba(180,83,9,0.07);
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -34,1125 +35,1012 @@
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: 'DM Mono', monospace;
+    font-family: 'Open Sans', sans-serif;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    overflow-x: hidden;
   }
 
-  /* Subtle grid background */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image:
-      linear-gradient(rgba(232,255,71,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(232,255,71,0.03) 1px, transparent 1px);
-    background-size: 40px 40px;
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  .app {
-    position: relative;
-    z-index: 1;
-    max-width: 960px;
-    margin: 0 auto;
-    padding: 48px 24px;
-    width: 100%;
-  }
-
-  /* Header */
-  header {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    margin-bottom: 48px;
-    flex-wrap: wrap;
-    gap: 16px;
-  }
-
-  .logo-block h1 {
-    font-family: 'Syne', sans-serif;
-    font-size: 2.2rem;
-    font-weight: 800;
-    letter-spacing: -0.03em;
-    line-height: 1;
-  }
-
-  .logo-block h1 span {
-    color: var(--accent);
-  }
-
-  .logo-block p {
-    color: var(--muted);
-    font-size: 0.78rem;
-    margin-top: 6px;
-    letter-spacing: 0.05em;
-  }
-
-  /* Auth button */
-  #auth-btn {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: 'DM Mono', monospace;
-    font-size: 0.78rem;
-    padding: 10px 18px;
-    cursor: pointer;
+  /* ── Header ───────────────────────────────────────────────────── */
+  .site-header {
+    background: var(--header-blue);
+    padding: 0 32px;
     display: flex;
     align-items: center;
-    gap: 8px;
-    transition: all 0.2s;
-    letter-spacing: 0.03em;
+    justify-content: space-between;
+    min-height: 72px;
+  }
+  .brand { display: flex; flex-direction: column; line-height: 1.15; }
+  .brand-title { font-size: 1.05rem; font-weight: 700; color: #fff; letter-spacing: 0.04em; text-transform: uppercase; }
+  .brand-sub   { font-size: 0.7rem; color: rgba(255,255,255,0.7); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 2px; }
+  .green-stripe { height: 7px; background: var(--green); }
+
+  /* User info in header */
+  #user-info {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    color: #fff;
+    font-size: 0.82rem;
+  }
+  #user-info.visible { display: flex; }
+  #user-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.5);
+    object-fit: cover;
+  }
+  #user-name { font-weight: 600; }
+  #user-email { font-size: 0.72rem; color: rgba(255,255,255,0.7); }
+  .sign-out-btn {
+    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4);
+    color: #fff; font-family: 'Open Sans', sans-serif; font-size: 0.75rem; font-weight: 600;
+    padding: 6px 12px; cursor: pointer; border-radius: 3px; transition: all 0.2s; margin-left: 4px;
+  }
+  .sign-out-btn:hover { background: rgba(255,255,255,0.28); }
+
+  /* ── Login screen ─────────────────────────────────────────────── */
+  #login-screen {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    gap: 24px;
   }
 
-  #auth-btn:hover {
-    border-color: var(--drive-blue);
-    color: var(--drive-blue);
-  }
-
-  #auth-btn.connected {
-    border-color: var(--success);
-    color: var(--success);
-  }
-
-  .drive-icon {
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
-  }
-
-  /* Config panel */
-  #config-panel {
+  .login-card {
     background: var(--surface);
     border: 1px solid var(--border);
-    padding: 20px 24px;
-    margin-bottom: 32px;
-    display: none;
+    border-top: 4px solid var(--header-blue);
+    padding: 40px 48px;
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+    border-radius: 0 0 4px 4px;
   }
 
-  #config-panel.visible { display: block; }
-
-  #config-panel h3 {
-    font-family: 'Syne', sans-serif;
-    font-size: 0.75rem;
+  .login-card .pac-logo {
+    font-family: 'Open Sans', sans-serif;
+    font-size: 0.72rem;
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--muted);
-    margin-bottom: 16px;
+    margin-bottom: 8px;
   }
 
-  .config-row {
+  .login-card h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 8px;
+  }
+
+  .login-card p {
+    font-size: 0.85rem;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 28px;
+  }
+
+  #google-signin-btn {
     display: flex;
-    gap: 12px;
-    align-items: stretch;
-    flex-wrap: wrap;
-  }
-
-  .config-row input {
-    flex: 1;
-    min-width: 200px;
-    background: var(--bg);
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 12px 20px;
+    background: #fff;
     border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
     color: var(--text);
-    font-family: 'DM Mono', monospace;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  #google-signin-btn:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.12); border-color: #bbb; }
+  #google-signin-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .google-logo { width: 20px; height: 20px; flex-shrink: 0; }
+
+  #login-status {
+    margin-top: 16px;
     font-size: 0.82rem;
-    padding: 10px 14px;
-    outline: none;
-    transition: border-color 0.2s;
+    min-height: 20px;
+    color: var(--muted);
+  }
+  #login-status.error { color: var(--danger); }
+
+  /* ── Access denied screen ─────────────────────────────────────── */
+  #access-denied {
+    display: none;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
   }
 
-  .config-row input:focus {
-    border-color: var(--accent2);
+  .denied-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 4px solid var(--danger);
+    padding: 40px 48px;
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+    border-radius: 0 0 4px 4px;
   }
 
+  .denied-card h2 { font-size: 1.2rem; font-weight: 700; color: var(--danger); margin-bottom: 12px; }
+  .denied-card p  { font-size: 0.85rem; color: var(--muted); line-height: 1.7; margin-bottom: 20px; }
+  .denied-card strong { color: var(--text); }
+
+  /* ── Main app ─────────────────────────────────────────────────── */
+  #main-app { display: none; flex-direction: column; }
+  #main-app.visible { display: flex; }
+
+  .app { max-width: 980px; margin: 0 auto; padding: 32px 24px 56px; width: 100%; }
+
+  .page-title { margin-bottom: 24px; border-bottom: 3px solid var(--green); padding-bottom: 14px; }
+  .page-title h2 { font-size: 1.4rem; font-weight: 700; color: var(--navy); }
+  .page-title p  { font-size: 0.85rem; color: var(--muted); margin-top: 4px; }
+
+  /* ── Panels ───────────────────────────────────────────────────── */
+  .panel { background: var(--surface); border: 1px solid var(--border); padding: 18px 22px; margin-bottom: 20px; border-radius: 0 3px 3px 0; }
+  .panel-blue  { border-left: 4px solid var(--header-blue); }
+  .panel-green { border-left: 4px solid var(--green-dark); }
+  .panel-top-blue { border-top: 4px solid var(--header-blue); border-left: none; border-radius: 0 0 3px 3px; padding: 22px 24px 20px; }
+
+  .panel h3 { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 14px; }
+  .panel-blue  h3 { color: var(--header-blue); }
+  .panel-green h3 { color: var(--green-dark); }
+
+  /* ── Credentials panel ────────────────────────────────────────── */
+  #config-panel { display: none; }
+  #config-panel.visible { display: block; }
+  .config-row { display: flex; gap: 10px; align-items: stretch; flex-wrap: wrap; }
+  .config-row input {
+    flex: 1; min-width: 200px; background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); font-family: 'Open Sans', sans-serif; font-size: 0.83rem;
+    padding: 9px 13px; outline: none; border-radius: 3px; transition: border-color 0.2s;
+  }
+  .config-row input:focus { border-color: var(--header-blue); }
   .config-row input::placeholder { color: var(--muted); }
 
-  .btn-secondary {
-    background: transparent;
-    border: 1px solid var(--accent2);
-    color: var(--accent2);
-    font-family: 'DM Mono', monospace;
-    font-size: 0.78rem;
-    padding: 10px 18px;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: all 0.2s;
-    letter-spacing: 0.03em;
+  /* ── Buttons ──────────────────────────────────────────────────── */
+  .btn-primary {
+    background: var(--header-blue); border: none; color: #fff;
+    font-family: 'Open Sans', sans-serif; font-size: 0.82rem; font-weight: 600;
+    padding: 9px 20px; cursor: pointer; border-radius: 3px; white-space: nowrap;
+    transition: background 0.2s; display: inline-flex; align-items: center; gap: 6px;
   }
-
-  .btn-secondary:hover {
-    background: rgba(71, 200, 255, 0.1);
+  .btn-primary:hover:not(:disabled) { background: #245a7a; }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-outline {
+    background: transparent; border: 1px solid var(--border); color: var(--muted);
+    font-family: 'Open Sans', sans-serif; font-size: 0.82rem; font-weight: 600;
+    padding: 9px 18px; cursor: pointer; border-radius: 3px; transition: all 0.2s;
   }
+  .btn-outline:hover { border-color: var(--danger); color: var(--danger); }
 
-  /* Two-column layout */
-  .columns {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-    margin-bottom: 24px;
+  /* ── Galley selector ──────────────────────────────────────────── */
+  .selector-row { display: flex; gap: 36px; flex-wrap: wrap; align-items: flex-start; margin-bottom: 18px; }
+  .selector-group { display: flex; flex-direction: column; gap: 8px; }
+  .selector-group-label { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--navy); }
+  .toggle-group { display: flex; gap: 8px; flex-wrap: wrap; }
+  .toggle-btn {
+    background: var(--surface2); border: 1.5px solid var(--border); color: var(--muted);
+    font-family: 'Open Sans', sans-serif; font-size: 0.82rem; font-weight: 600;
+    padding: 8px 18px; cursor: pointer; border-radius: 3px; transition: all 0.18s; white-space: nowrap;
   }
+  .toggle-btn:hover { border-color: var(--header-blue); color: var(--header-blue); }
+  .toggle-btn.selected { background: var(--header-blue); border-color: var(--header-blue); color: #fff; }
 
-  @media (max-width: 640px) {
-    .columns { grid-template-columns: 1fr; }
+  #galley-confirm {
+    display: flex; align-items: center; gap: 10px; background: var(--surface2);
+    border: 1px solid var(--border); border-left: 4px solid var(--green-dark);
+    padding: 11px 16px; border-radius: 0 3px 3px 0; font-size: 0.88rem;
+    font-weight: 600; color: var(--navy); min-height: 44px; transition: all 0.2s;
   }
+  #galley-confirm.incomplete { border-left-color: var(--border); color: var(--muted); font-style: italic; font-weight: 400; }
+  .confirm-label { font-weight: 700; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--green-dark); white-space: nowrap; flex-shrink: 0; }
+  #galley-confirm.incomplete .confirm-label { color: var(--muted); }
 
-  .column-label {
-    font-family: 'Syne', sans-serif;
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
+  /* ── Merge tool ───────────────────────────────────────────────── */
+  #merge-tool { transition: opacity 0.3s; }
+  #merge-tool.dimmed { opacity: 0.38; pointer-events: none; user-select: none; }
 
-  .column-label .badge {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--muted);
-    font-size: 0.65rem;
-    padding: 2px 7px;
-    border-radius: 20px;
-    font-weight: 400;
-  }
-
-  /* Drop zone */
+  /* ── Drop zone ────────────────────────────────────────────────── */
   #drop-zone {
-    border: 1.5px dashed var(--border);
-    background: var(--surface);
-    padding: 40px 24px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    min-height: 200px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    position: relative;
+    border: 2px dashed var(--border); background: var(--surface); padding: 28px 24px;
+    text-align: center; cursor: pointer; transition: all 0.2s; display: flex;
+    flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+    position: relative; border-radius: 3px; margin-bottom: 20px;
   }
-
-  #drop-zone:hover,
-  #drop-zone.drag-over {
-    border-color: var(--accent);
-    background: rgba(232, 255, 71, 0.04);
-  }
-
+  #drop-zone:hover, #drop-zone.drag-over { border-color: var(--header-blue); background: rgba(45,106,143,0.04); }
   #drop-zone.drag-over::after {
-    content: 'DROP HERE';
-    position: absolute;
-    inset: 0;
-    background: rgba(232, 255, 71, 0.08);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: 'Syne', sans-serif;
-    font-size: 1.5rem;
-    font-weight: 800;
-    color: var(--accent);
-    letter-spacing: 0.1em;
+    content: 'DROP HERE'; position: absolute; inset: 0; background: rgba(45,106,143,0.07);
+    display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
+    font-weight: 700; color: var(--header-blue); letter-spacing: 0.12em; border-radius: 3px;
   }
-
-  .drop-icon {
-    width: 40px;
-    height: 40px;
-    opacity: 0.3;
-  }
-
-  #drop-zone p {
-    color: var(--muted);
-    font-size: 0.78rem;
-    line-height: 1.6;
-  }
-
-  #drop-zone strong {
-    color: var(--accent);
-    font-weight: 500;
-  }
-
+  .drop-icon { width: 32px; height: 32px; opacity: 0.22; color: var(--header-blue); }
+  #drop-zone p { color: var(--muted); font-size: 0.82rem; line-height: 1.6; }
+  #drop-zone strong { color: var(--header-blue); font-weight: 600; }
   #file-input { display: none; }
 
-  /* Drive files panel */
-  #drive-panel {
-    background: var(--surface);
-    border: 1.5px solid var(--border);
-    min-height: 200px;
-    display: flex;
-    flex-direction: column;
+  /* ── Submission banner ────────────────────────────────────────── */
+  #submission-banner {
+    display: none; align-items: center; gap: 10px; padding: 9px 16px;
+    margin-bottom: 16px; border-radius: 0 3px 3px 0; font-size: 0.82rem; font-weight: 600;
+    border-left: 4px solid var(--green-dark); background: var(--success-bg); color: var(--success);
+  }
+  #submission-banner.error { border-left-color: var(--danger); background: var(--danger-bg); color: var(--danger); }
+  #submission-banner.visible { display: flex; }
+
+  /* ── Queue ────────────────────────────────────────────────────── */
+  .section-label {
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--navy); margin-bottom: 8px; display: flex; align-items: center; gap: 8px;
+  }
+  .badge {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+    font-size: 0.63rem; padding: 2px 7px; border-radius: 20px; font-weight: 600; letter-spacing: 0.05em;
   }
 
-  #drive-panel .panel-empty {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 40px 24px;
-    text-align: center;
-    gap: 10px;
-    color: var(--muted);
-    font-size: 0.78rem;
-    line-height: 1.6;
+  #structured-queue { background: var(--surface); border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
+
+  .queue-slot { display: flex; align-items: center; border-bottom: 1px solid var(--border); min-height: 44px; }
+  .queue-slot:last-child { border-bottom: none; }
+
+  .slot-order {
+    width: 36px; flex-shrink: 0; text-align: center; font-size: 0.72rem; color: var(--muted);
+    font-weight: 700; align-self: stretch; display: flex; align-items: center; justify-content: center;
+    background: var(--surface2); border-right: 1px solid var(--border);
   }
+  .slot-body { flex: 1; display: flex; align-items: center; gap: 10px; padding: 8px 14px; min-width: 0; }
+  .slot-desc { flex: 1; font-size: 0.82rem; min-width: 0; }
+  .slot-desc .slot-name { font-weight: 600; color: var(--navy); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .slot-desc .slot-filename { font-size: 0.72rem; color: var(--muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-  /* File list */
-  .file-list {
-    display: flex;
-    flex-direction: column;
+  .slot-tag {
+    font-size: 0.63rem; font-weight: 700; padding: 2px 8px; border-radius: 10px;
+    flex-shrink: 0; white-space: nowrap; letter-spacing: 0.04em;
   }
+  .slot-tag.default  { background: rgba(45,106,143,0.1);  color: var(--header-blue); border: 1px solid rgba(45,106,143,0.25); }
+  .slot-tag.matched  { background: var(--success-bg); color: var(--success); border: 1px solid rgba(46,125,50,0.3); }
+  .slot-tag.missing  { background: var(--danger-bg); color: var(--danger); border: 1px solid rgba(192,57,43,0.25); }
+  .slot-tag.optional { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
 
-  .file-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 14px;
-    border-bottom: 1px solid var(--border);
-    transition: background 0.15s;
-    cursor: grab;
-    user-select: none;
+  .slot-action { flex-shrink: 0; padding-right: 10px; }
+  .slot-remove-btn {
+    background: none; border: none; color: var(--muted); cursor: pointer;
+    font-size: 0.85rem; line-height: 1; padding: 2px 4px; transition: color 0.15s;
   }
+  .slot-remove-btn:hover { color: var(--danger); }
 
-  .file-item:last-child { border-bottom: none; }
-  .file-item:hover { background: var(--surface2); }
-  .file-item.dragging { opacity: 0.4; }
-
-  .drag-handle {
-    color: var(--border);
-    font-size: 0.9rem;
-    cursor: grab;
-    flex-shrink: 0;
+  /* ── Unmatched warning ────────────────────────────────────────── */
+  #unmatched-section { margin-bottom: 20px; display: none; }
+  #unmatched-section.visible { display: block; }
+  .unmatched-list {
+    background: var(--warning-bg); border: 1px solid rgba(180,83,9,0.2);
+    border-left: 4px solid var(--warning); border-radius: 0 3px 3px 0;
+    padding: 12px 16px; font-size: 0.82rem; color: var(--warning);
   }
+  .unmatched-list strong { display: block; margin-bottom: 6px; font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; }
+  .unmatched-list ul { padding-left: 18px; }
+  .unmatched-list li { margin-bottom: 2px; }
 
-  .file-num {
-    font-size: 0.7rem;
-    color: var(--muted);
-    width: 18px;
-    text-align: right;
-    flex-shrink: 0;
+  /* ── Actions ──────────────────────────────────────────────────── */
+  .output-row { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+  .output-row label { font-size: 0.75rem; font-weight: 700; color: var(--navy); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
+  .output-row input {
+    flex: 1; min-width: 180px; background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); font-family: 'Open Sans', sans-serif; font-size: 0.85rem;
+    padding: 9px 13px; outline: none; border-radius: 3px; transition: border-color 0.2s;
   }
-
-  .file-name {
-    flex: 1;
-    font-size: 0.8rem;
-    color: var(--text);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .file-source {
-    font-size: 0.65rem;
-    padding: 2px 7px;
-    border-radius: 12px;
-    flex-shrink: 0;
-    font-weight: 500;
-  }
-
-  .file-source.local {
-    background: rgba(232, 255, 71, 0.12);
-    color: var(--accent);
-    border: 1px solid rgba(232, 255, 71, 0.25);
-  }
-
-  .file-source.drive {
-    background: rgba(66, 133, 244, 0.12);
-    color: var(--drive-blue);
-    border: 1px solid rgba(66, 133, 244, 0.25);
-  }
-
-  .file-pages {
-    font-size: 0.68rem;
-    color: var(--muted);
-    flex-shrink: 0;
-  }
-
-  .remove-btn {
-    background: none;
-    border: none;
-    color: var(--muted);
-    cursor: pointer;
-    padding: 2px 4px;
-    font-size: 0.9rem;
-    line-height: 1;
-    flex-shrink: 0;
-    transition: color 0.15s;
-  }
-
-  .remove-btn:hover { color: var(--danger); }
-
-  /* Merge queue */
-  #merge-queue-section {
-    margin-bottom: 24px;
-  }
-
-  #merge-queue {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    min-height: 80px;
-  }
-
-  #merge-queue .queue-empty {
-    padding: 28px;
-    text-align: center;
-    color: var(--muted);
-    font-size: 0.78rem;
-  }
-
-  /* Action bar */
-  .action-bar {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    flex-wrap: wrap;
-  }
+  .output-row input:focus { border-color: var(--header-blue); }
+  .action-bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 
   #merge-btn {
-    background: var(--accent);
-    color: #0d0d0f;
-    border: none;
-    font-family: 'Syne', sans-serif;
-    font-size: 0.9rem;
-    font-weight: 700;
-    padding: 14px 32px;
-    cursor: pointer;
-    letter-spacing: 0.04em;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    background: var(--header-blue); color: #fff; border: none;
+    font-family: 'Open Sans', sans-serif; font-size: 0.9rem; font-weight: 700;
+    padding: 12px 28px; cursor: pointer; border-radius: 3px; transition: all 0.2s;
+    display: flex; align-items: center; gap: 8px;
   }
+  #merge-btn:hover:not(:disabled) { background: #245a7a; transform: translateY(-1px); box-shadow: 0 3px 10px rgba(30,58,95,0.18); }
+  #merge-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+  .file-count-info { color: var(--muted); font-size: 0.78rem; margin-left: auto; }
 
-  #merge-btn:hover:not(:disabled) {
-    background: #f5ff7a;
-    transform: translateY(-1px);
-  }
-
-  #merge-btn:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
-    transform: none;
-  }
-
-  #clear-btn {
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--muted);
-    font-family: 'DM Mono', monospace;
-    font-size: 0.78rem;
-    padding: 14px 20px;
-    cursor: pointer;
-    transition: all 0.2s;
-    letter-spacing: 0.03em;
-  }
-
-  #clear-btn:hover {
-    border-color: var(--danger);
-    color: var(--danger);
-  }
-
-  .file-count-info {
-    color: var(--muted);
-    font-size: 0.75rem;
-    margin-left: auto;
-  }
-
-  /* Status / progress */
+  /* ── Status bar ───────────────────────────────────────────────── */
   #status-bar {
-    margin-top: 16px;
-    padding: 12px 16px;
-    font-size: 0.78rem;
-    display: none;
-    border-left: 3px solid var(--accent);
-    background: rgba(232, 255, 71, 0.05);
+    margin-top: 14px; padding: 11px 16px; font-size: 0.82rem; display: none;
+    border-left: 4px solid var(--header-blue); background: rgba(45,106,143,0.06);
+    border-radius: 0 3px 3px 0; color: var(--navy);
   }
-
   #status-bar.visible { display: block; }
-  #status-bar.error { border-color: var(--danger); background: rgba(255, 92, 92, 0.05); color: var(--danger); }
-  #status-bar.success { border-color: var(--success); background: rgba(71, 255, 156, 0.05); color: var(--success); }
+  #status-bar.error   { border-color: var(--danger);  background: var(--danger-bg);  color: var(--danger); }
+  #status-bar.success { border-color: var(--success); background: var(--success-bg); color: var(--success); }
 
-  /* Drive file checkboxes */
-  .drive-file-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 9px 14px;
-    border-bottom: 1px solid var(--border);
-    transition: background 0.15s;
-    cursor: pointer;
-  }
-
-  .drive-file-item:last-child { border-bottom: none; }
-  .drive-file-item:hover { background: var(--surface2); }
-
-  .drive-file-item input[type="checkbox"] {
-    accent-color: var(--drive-blue);
-    width: 14px;
-    height: 14px;
-    cursor: pointer;
-    flex-shrink: 0;
-  }
-
-  .drive-file-name {
-    flex: 1;
-    font-size: 0.8rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .drive-add-btn {
-    font-size: 0.65rem;
-    color: var(--drive-blue);
-    background: rgba(66, 133, 244, 0.1);
-    border: 1px solid rgba(66, 133, 244, 0.25);
-    padding: 3px 8px;
-    cursor: pointer;
-    font-family: 'DM Mono', monospace;
-    transition: background 0.15s;
-    flex-shrink: 0;
-  }
-
-  .drive-add-btn:hover { background: rgba(66, 133, 244, 0.2); }
-  .drive-add-btn.added { opacity: 0.4; cursor: default; }
-
-  .panel-toolbar {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 14px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface2);
-  }
-
-  .panel-toolbar span {
-    font-size: 0.7rem;
-    color: var(--muted);
-    flex: 1;
-  }
-
-  .panel-toolbar button {
-    font-size: 0.7rem;
-    background: none;
-    border: none;
-    color: var(--accent2);
-    cursor: pointer;
-    font-family: 'DM Mono', monospace;
-    padding: 2px 0;
-    transition: opacity 0.15s;
-  }
-
-  .panel-toolbar button:hover { opacity: 0.7; }
-
-  /* Output filename input */
-  .output-row {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    margin-bottom: 16px;
-    flex-wrap: wrap;
-  }
-
-  .output-row label {
-    font-size: 0.72rem;
-    color: var(--muted);
-    letter-spacing: 0.05em;
-    white-space: nowrap;
-  }
-
-  .output-row input {
-    flex: 1;
-    min-width: 180px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: 'DM Mono', monospace;
-    font-size: 0.82rem;
-    padding: 9px 14px;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-
-  .output-row input:focus { border-color: var(--accent); }
-
-  /* Scrollable file lists */
-  .scroll-list {
-    max-height: 280px;
-    overflow-y: auto;
-  }
-
-  .scroll-list::-webkit-scrollbar { width: 4px; }
-  .scroll-list::-webkit-scrollbar-track { background: transparent; }
-  .scroll-list::-webkit-scrollbar-thumb { background: var(--border); }
-
-  /* Loading spinner */
+  /* ── Shared ───────────────────────────────────────────────────── */
   .spinner {
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    border: 2px solid rgba(255,255,255,0.2);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.6s linear infinite;
+    display: inline-block; width: 13px; height: 13px;
+    border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
+    border-radius: 50%; animation: spin 0.6s linear infinite;
   }
-
+  .spinner-dark {
+    display: inline-block; width: 16px; height: 16px;
+    border: 2px solid rgba(0,0,0,0.15); border-top-color: var(--header-blue);
+    border-radius: 50%; animation: spin 0.6s linear infinite;
+  }
   @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* Setup notice */
-  #setup-notice {
-    background: var(--surface);
-    border: 1px solid rgba(232, 255, 71, 0.2);
-    padding: 20px 24px;
-    margin-bottom: 32px;
-    font-size: 0.78rem;
-    line-height: 1.8;
-    color: var(--muted);
-  }
-
-  #setup-notice h3 {
-    font-family: 'Syne', sans-serif;
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: var(--accent);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    margin-bottom: 12px;
-  }
-
-  #setup-notice ol {
-    padding-left: 20px;
-  }
-
-  #setup-notice li { margin-bottom: 4px; }
-  #setup-notice code {
-    background: var(--surface2);
-    color: var(--accent2);
-    padding: 1px 5px;
-    font-size: 0.75rem;
-  }
-
-  #setup-notice a { color: var(--accent2); }
-
-  .setup-dismiss {
-    margin-top: 14px;
-    background: none;
-    border: 1px solid var(--border);
-    color: var(--muted);
-    font-family: 'DM Mono', monospace;
-    font-size: 0.72rem;
-    padding: 6px 14px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .setup-dismiss:hover { border-color: var(--accent); color: var(--accent); }
 </style>
 </head>
 <body>
-<div class="app">
 
-  <header>
-    <div class="logo-block">
-      <h1>PDF<span>+</span>MERGE</h1>
-      <p>LOCAL FILES &nbsp;·&nbsp; GOOGLE DRIVE &nbsp;·&nbsp; ZERO SERVER</p>
-    </div>
-    <button id="auth-btn" onclick="handleAuth()">
-      <svg class="drive-icon" viewBox="0 0 24 24" fill="none">
-        <path d="M12 2L2 19h6l4-7 4 7h6L12 2z" fill="#4285f4"/>
-        <path d="M2 19h8l-4-7-4 7z" fill="#34a853" opacity="0.7"/>
-        <path d="M14 12l4 7h-8l4-7z" fill="#ea4335" opacity="0.7"/>
-      </svg>
-      <span id="auth-label">Connect Google Drive</span>
-    </button>
-  </header>
-
-  <!-- Setup notice (shown by default) -->
-  <div id="setup-notice">
-    <h3>⚙ One-time setup required</h3>
-    <ol>
-      <li>Go to <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a> → Create a project.</li>
-      <li>Enable the <strong>Google Drive API</strong> and <strong>Google Picker API</strong>.</li>
-      <li>Create an <strong>OAuth 2.0 Client ID</strong> (Web application type). Add <code>file://</code> or your local origin to Authorized origins.</li>
-      <li>Create an <strong>API Key</strong> and restrict it to the Drive &amp; Picker APIs.</li>
-      <li>Paste your Client ID and API Key into the fields below, then click Save.</li>
-    </ol>
-    <button class="setup-dismiss" onclick="document.getElementById('setup-notice').style.display='none'">Got it, dismiss</button>
+<!-- ── Site header ─────────────────────────────────────────────── -->
+<header class="site-header">
+  <div class="brand">
+    <span class="brand-title">POGIL Activity Clearinghouse</span>
+    <span class="brand-sub">Galley Proof Merge Tool</span>
   </div>
-
-  <!-- API credentials config -->
-  <div id="config-panel" class="visible">
-    <h3>Google API Credentials</h3>
-    <div class="config-row">
-      <input type="text" id="client-id-input" placeholder="OAuth 2.0 Client ID  (ends in .apps.googleusercontent.com)">
-      <input type="text" id="api-key-input" placeholder="API Key">
-      <button class="btn-secondary" onclick="saveCredentials()">Save &amp; Init</button>
-    </div>
-  </div>
-
-  <div class="columns">
-    <!-- Left: Drag & drop local files -->
+  <div id="user-info">
+    <img id="user-avatar" src="" alt="">
     <div>
-      <div class="column-label">
-        Local Files
-        <span class="badge">drag &amp; drop</span>
+      <div id="user-name"></div>
+      <div id="user-email"></div>
+    </div>
+    <button class="sign-out-btn" onclick="signOut()">Sign out</button>
+  </div>
+</header>
+<div class="green-stripe"></div>
+
+<!-- ── Login screen ────────────────────────────────────────────── -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="pac-logo">POGIL Activity Clearinghouse</div>
+    <h2>Galley Proof Merge Tool</h2>
+    <p>This tool is available to authorized PAC staff and reviewers. Sign in with your Google account to continue.</p>
+    <button id="google-signin-btn" onclick="startSignIn()" disabled>
+      <svg class="google-logo" viewBox="0 0 24 24">
+        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+      </svg>
+      Sign in with Google
+    </button>
+    <div id="login-status"></div>
+  </div>
+</div>
+
+<!-- ── Access denied screen ────────────────────────────────────── -->
+<div id="access-denied">
+  <div class="denied-card">
+    <h2>Access Denied</h2>
+    <p>The account <strong id="denied-email"></strong> is not authorized to use this tool.</p>
+    <p>To request access, contact the PAC administrator.</p>
+    <button class="btn-primary" style="margin: 0 auto; display:flex;" onclick="signOut()">Sign in with a different account</button>
+  </div>
+</div>
+
+<!-- ── Main app ─────────────────────────────────────────────────── -->
+<div id="main-app">
+  <div class="app">
+
+    <div class="page-title">
+      <h2>Galley Proof Merge Tool</h2>
+      <p>Select the activity kind and level, upload files, then merge into a galley proof PDF.</p>
+    </div>
+
+    <!-- Galley selector -->
+    <div class="panel panel-top-blue">
+      <div class="selector-row">
+        <div class="selector-group">
+          <div class="selector-group-label">Activity Kind</div>
+          <div class="toggle-group">
+            <button class="toggle-btn" id="kind-lc"  onclick="selectKind('lc')">Learning Cycle</button>
+            <button class="toggle-btn" id="kind-app" onclick="selectKind('app')">Application</button>
+          </div>
+        </div>
+        <div class="selector-group">
+          <div class="selector-group-label">Activity Level</div>
+          <div class="toggle-group">
+            <button class="toggle-btn" id="level-idea"     onclick="selectLevel('idea')">Activity Idea</button>
+            <button class="toggle-btn" id="level-review"   onclick="selectLevel('review')">For Review</button>
+            <button class="toggle-btn" id="level-testing"  onclick="selectLevel('testing')">For Testing</button>
+            <button class="toggle-btn" id="level-approved" onclick="selectLevel('approved')">Approved Activity</button>
+          </div>
+        </div>
       </div>
+      <div id="galley-confirm" class="incomplete">
+        <span class="confirm-label">Galley Type</span>
+        <span id="galley-confirm-text">Select both an activity kind and level above to continue.</span>
+      </div>
+    </div>
+
+    <!-- Merge tool -->
+    <div id="merge-tool" class="dimmed">
+
       <div id="drop-zone"
            ondragover="handleDragOver(event)"
            ondragleave="handleDragLeave(event)"
            ondrop="handleDrop(event)"
            onclick="document.getElementById('file-input').click()">
-        <svg class="drop-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg class="drop-icon" viewBox="0 0 48 48" fill="none">
           <rect x="8" y="6" width="28" height="36" rx="2" stroke="currentColor" stroke-width="2"/>
           <path d="M28 6v10h10" stroke="currentColor" stroke-width="2"/>
           <path d="M16 28l8-8 8 8M24 20v14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>
-        <p><strong>Click or drag PDFs here</strong><br>Add one or more local PDF files</p>
+        <p><strong>Click or drag activity PDFs here</strong><br>Files will be matched to their slots automatically</p>
       </div>
       <input type="file" id="file-input" accept=".pdf" multiple onchange="handleFileInput(event)">
-    </div>
 
-    <!-- Right: Google Drive files -->
-    <div>
-      <div class="column-label">
-        Google Drive
-        <span class="badge">folder picker</span>
-      </div>
-      <div id="drive-panel">
-        <div class="panel-empty" id="drive-empty">
-          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" opacity="0.3">
-            <path d="M12 2L2 19h6l4-7 4 7h6L12 2z" fill="#4285f4"/>
-          </svg>
-          <span>Connect Google Drive<br>then pick a folder to browse PDFs</span>
-          <button class="btn-secondary" style="margin-top:8px" onclick="openDrivePicker()">Browse Drive Folder</button>
-        </div>
-        <div id="drive-file-list" style="display:none; flex-direction:column; flex:1;">
-          <div class="panel-toolbar">
-            <span id="drive-folder-name">Drive Folder</span>
-            <button onclick="openDrivePicker()">Change folder</button>
-            <button onclick="addAllDriveFiles()">Add all →</button>
-          </div>
-          <div class="scroll-list" id="drive-items"></div>
+      <div id="submission-banner"></div>
+
+      <div id="unmatched-section">
+        <div class="unmatched-list">
+          <strong>⚠ Unrecognized files — not added to queue</strong>
+          <ul id="unmatched-list"></ul>
         </div>
       </div>
-    </div>
-  </div>
 
-  <!-- Merge queue -->
-  <div id="merge-queue-section">
-    <div class="column-label" style="margin-bottom:12px">
-      Merge Queue
-      <span class="badge" id="queue-badge">0 files</span>
-      <span style="color:var(--muted); font-size:0.68rem; font-weight:400; margin-left:4px">drag to reorder</span>
-    </div>
-    <div id="merge-queue">
-      <div class="queue-empty" id="queue-empty">Add files from local or Drive above — they'll appear here for ordering</div>
-      <div class="file-list scroll-list" id="queue-list"></div>
-    </div>
-  </div>
+      <div id="queue-section" style="margin-bottom:20px">
+        <div class="section-label" style="margin-bottom:10px">
+          Merge Queue
+          <span class="badge" id="queue-badge">0 files ready</span>
+        </div>
+        <div id="structured-queue"></div>
+      </div>
 
-  <!-- Output filename + actions -->
-  <div class="output-row">
-    <label>OUTPUT FILE</label>
-    <input type="text" id="output-name" value="merged-output.pdf" placeholder="merged-output.pdf">
-  </div>
+      <div class="output-row">
+        <label>Output File</label>
+        <input type="text" id="output-name" value="galley.pdf" placeholder="galley.pdf">
+      </div>
 
-  <div class="action-bar">
-    <button id="merge-btn" onclick="mergePDFs()" disabled>
-      ⬇ Merge &amp; Download
-    </button>
-    <button id="clear-btn" onclick="clearQueue()">Clear All</button>
-    <span class="file-count-info" id="file-count-info"></span>
-  </div>
+      <div class="action-bar">
+        <button id="merge-btn" onclick="mergePDFs()" disabled>⬇ Merge &amp; Download</button>
+        <button class="btn-outline" onclick="clearAll()">Clear Uploads</button>
+        <span class="file-count-info" id="file-count-info"></span>
+      </div>
 
-  <div id="status-bar"></div>
+      <div id="status-bar"></div>
 
-</div>
+    </div><!-- /merge-tool -->
+  </div><!-- /app -->
+</div><!-- /main-app -->
 
 <script>
-// ─── State ──────────────────────────────────────────────────────────────────
-let CLIENT_ID = '';
-let API_KEY = '';
-const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
-const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
+// ─── Config ───────────────────────────────────────────────────────────────────
+const GITHUB_BASE    = 'https://sgarrettroe.github.io/pac-galley-proofs/';
+const SHEETS_ID      = '1kS1hdzPkakm5UcrGGCJxn2xiiogG_Ldr_pOmfPVQk1g';
+const SHEETS_RANGE   = 'Sheet1!A:A';
+const SCOPES         = 'openid email profile';
 
-let tokenClient = null;
-let gapiInited = false;
-let gisInited = false;
-let isSignedIn = false;
+// Replace with your OAuth Client ID
+const CLIENT_ID      = '391942070960-f2ap9skgmg61ap56fbpegv39ghrc4vbc.apps.googleusercontent.com';
 
-let mergeQueue = []; // { id, name, source:'local'|'drive', data: ArrayBuffer|null, driveId: string|null, pages: number|null }
-let driveFiles = []; // files listed from selected folder
-let driveQueuedIds = new Set();
-let dragSrcIndex = null;
+// ─── Galley formulas ──────────────────────────────────────────────────────────
+const KIND_LABELS  = { lc: 'Learning Cycle', app: 'Application' };
+const LEVEL_LABELS = { idea: 'Activity Idea', review: 'For Review', testing: 'For Testing', approved: 'Approved Activity' };
+const KIND_SHORT   = { lc: 'LC', app: 'App' };
+const LEVEL_SHORT  = { idea: 'idea', review: 'review', testing: 'testing', approved: 'approved' };
 
-// ─── Credentials ────────────────────────────────────────────────────────────
-function saveCredentials() {
-  CLIENT_ID = document.getElementById('client-id-input').value.trim();
-  API_KEY = document.getElementById('api-key-input').value.trim();
-  if (!CLIENT_ID || !API_KEY) {
-    showStatus('Please enter both Client ID and API Key.', 'error');
-    return;
-  }
-  // Persist to localStorage for convenience
-  localStorage.setItem('pdf_merge_client_id', CLIENT_ID);
-  localStorage.setItem('pdf_merge_api_key', API_KEY);
-  document.getElementById('config-panel').classList.remove('visible');
-  initGoogleAPIs();
-  showStatus('Credentials saved. Initializing Google APIs…', '');
-}
+const FORMULAS = {
+  'lc-idea': [
+    { order:1,  desc:'Cover Sheet',            source:'default', path:'templates/Coversheet-Activity Idea.pdf',               required:true  },
+    { order:2,  desc:'Components',             source:'default', path:'templates/Coversheet Components_Idea.pdf',             required:true  },
+    { order:3,  desc:'Submission Form',        source:'upload',  pattern:'$1-POGIL?Activity?Submission?Form*.pdf',            required:true  },
+    { order:4,  desc:'Facilitation Guide',     source:'upload',  pattern:'$1-Facilitation?Guide-*.pdf',                       required:true  },
+    { order:5,  desc:'Activity',               source:'upload',  pattern:'$1-Activity-*.pdf',                                 required:false },
+    { order:6,  desc:'Activity Key',           source:'upload',  pattern:'$1-Answer?Key-*.pdf',                               required:false },
+    { order:7,  desc:'Other File',             source:'upload',  pattern:'$1-Other-*.pdf',                                    required:false },
+    { order:8,  desc:'Donation Page',          source:'default', path:'templates/Donation_page.pdf',                         required:true  },
+    { order:9,  desc:'Learning Cycle Rubric',  source:'default', path:'rubrics/2024_Learning_Cycle_Activity_Rubric.pdf',     required:true  },
+    { order:10, desc:'Process Skill Rubric',   source:'default', path:'rubrics/2021_Process_Rubric.pdf',                     required:true  },
+  ],
+  'app-idea': [
+    { order:1,  desc:'Cover Sheet',            source:'default', path:'templates/Coversheet-Activity Idea.pdf',               required:true  },
+    { order:2,  desc:'Components',             source:'default', path:'templates/Coversheet Components_Idea.pdf',             required:true  },
+    { order:3,  desc:'Submission Form',        source:'upload',  pattern:'$1-POGIL?Activity?Submission?Form*.pdf',            required:true  },
+    { order:4,  desc:'Facilitation Guide',     source:'upload',  pattern:'$1-Facilitation?Guide-*.pdf',                       required:true  },
+    { order:5,  desc:'Activity',               source:'upload',  pattern:'$1-Activity-*.pdf',                                 required:false },
+    { order:6,  desc:'Activity Key',           source:'upload',  pattern:'$1-Answer?Key-*.pdf',                               required:false },
+    { order:7,  desc:'Other File',             source:'upload',  pattern:'$1-Other-*.pdf',                                    required:false },
+    { order:8,  desc:'Donation Page',          source:'default', path:'templates/Donation_page.pdf',                         required:true  },
+    { order:9,  desc:'Application Rubric',     source:'default', path:'rubrics/2024_Application_Activity_Rubric.pdf',        required:true  },
+    { order:10, desc:'Process Skill Rubric',   source:'default', path:'rubrics/2021_Process_Rubric.pdf',                     required:true  },
+  ],
+  'lc-review': [
+    { order:1,  desc:'Cover Sheet',            source:'default', path:'templates/Coversheet-Activity For Review.pdf',         required:true  },
+    { order:2,  desc:'Components',             source:'default', path:'templates/Coversheet Components_Review.pdf',           required:true  },
+    { order:3,  desc:'Fair Use Disclaimer',    source:'upload',  pattern:'$1-Fair+Use+Disclaimer-*.pdf',                      required:false },
+    { order:4,  desc:'Submission Form',        source:'upload',  pattern:'$1-POGIL?Activity?Submission?Form*.pdf',            required:true  },
+    { order:5,  desc:'Review Summary',         source:'upload',  pattern:'$1-Review?Summary*.pdf',                            required:true  },
+    { order:6,  desc:'Author Response Letter', source:'upload',  pattern:'$1-Feedback?Response?Letter-*.pdf',                 required:false },
+    { order:7,  desc:'Facilitation Guide',     source:'upload',  pattern:'$1-Facilitation?Guide-*.pdf',                       required:true  },
+    { order:8,  desc:'Activity',               source:'upload',  pattern:'$1-Activity-*.pdf',                                 required:true  },
+    { order:9,  desc:'Activity Key',           source:'upload',  pattern:'$1-Answer?Key-*.pdf',                               required:true  },
+    { order:10, desc:'Other File',             source:'upload',  pattern:'$1-Other-*.pdf',                                    required:false },
+    { order:11, desc:'Donation Page',          source:'default', path:'templates/Donation_page.pdf',                         required:true  },
+    { order:12, desc:'Learning Cycle Rubric',  source:'default', path:'rubrics/2024_Learning_Cycle_Activity_Rubric.pdf',     required:true  },
+    { order:13, desc:'Process Skill Rubric',   source:'default', path:'rubrics/2021_Process_Rubric.pdf',                     required:true  },
+  ],
+  'app-review': [
+    { order:1,  desc:'Cover Sheet',            source:'default', path:'templates/Coversheet-Activity For Review.pdf',         required:true  },
+    { order:2,  desc:'Components',             source:'default', path:'templates/Coversheet Components_Review.pdf',           required:true  },
+    { order:3,  desc:'Fair Use Disclaimer',    source:'upload',  pattern:'$1-Fair+Use+Disclaimer-*.pdf',                      required:false },
+    { order:4,  desc:'Submission Form',        source:'upload',  pattern:'$1-POGIL?Activity?Submission?Form*.pdf',            required:true  },
+    { order:5,  desc:'Review Summary',         source:'upload',  pattern:'$1-Review?Summary*.pdf',                            required:true  },
+    { order:6,  desc:'Author Response Letter', source:'upload',  pattern:'$1-Feedback?Response?Letter-*.pdf',                 required:false },
+    { order:7,  desc:'Facilitation Guide',     source:'upload',  pattern:'$1-Facilitation?Guide-*.pdf',                       required:true  },
+    { order:8,  desc:'Activity',               source:'upload',  pattern:'$1-Activity-*.pdf',                                 required:true  },
+    { order:9,  desc:'Activity Key',           source:'upload',  pattern:'$1-Answer?Key-*.pdf',                               required:true  },
+    { order:10, desc:'Other File',             source:'upload',  pattern:'$1-Other-*.pdf',                                    required:false },
+    { order:11, desc:'Donation Page',          source:'default', path:'templates/Donation_page.pdf',                         required:true  },
+    { order:12, desc:'Application Rubric',     source:'default', path:'rubrics/2024_Application_Activity_Rubric.pdf',        required:true  },
+    { order:13, desc:'Process Skill Rubric',   source:'default', path:'rubrics/2021_Process_Rubric.pdf',                     required:true  },
+  ],
+  'lc-testing': [
+    { order:1,  desc:'Cover Sheet',            source:'default', path:'templates/Coversheet-Activity For Testing.pdf',        required:true  },
+    { order:2,  desc:'Components',             source:'default', path:'templates/Coversheet Components_Testing.pdf',          required:true  },
+    { order:3,  desc:'Fair Use Disclaimer',    source:'upload',  pattern:'$1-Fair+Use+Disclaimer-*.pdf',                      required:false },
+    { order:4,  desc:'Submission Form',        source:'upload',  pattern:'$1-POGIL?Activity?Submission?Form*.pdf',            required:true  },
+    { order:5,  desc:'Review Summary',         source:'upload',  pattern:'$1-Review?Summary*.pdf',                            required:true  },
+    { order:6,  desc:'Author Response Letter', source:'upload',  pattern:'$1-Feedback?Response?Letter-*.pdf',                 required:false },
+    { order:7,  desc:'Facilitation Guide',     source:'upload',  pattern:'$1-Facilitation?Guide-*.pdf',                       required:true  },
+    { order:8,  desc:'Activity',               source:'upload',  pattern:'$1-Activity-*.pdf',                                 required:true  },
+    { order:9,  desc:'Activity Key',           source:'upload',  pattern:'$1-Answer?Key-*.pdf',                               required:true  },
+    { order:10, desc:'Other File',             source:'upload',  pattern:'$1-Other-*.pdf',                                    required:false },
+    { order:11, desc:'Donation Page',          source:'default', path:'templates/Donation_page.pdf',                         required:true  },
+    { order:12, desc:'Learning Cycle Rubric',  source:'default', path:'rubrics/2024_Learning_Cycle_Activity_Rubric.pdf',     required:true  },
+    { order:13, desc:'Process Skill Rubric',   source:'default', path:'rubrics/2021_Process_Rubric.pdf',                     required:true  },
+  ],
+  'app-testing': [
+    { order:1,  desc:'Cover Sheet',            source:'default', path:'templates/Coversheet-Activity For Testing.pdf',        required:true  },
+    { order:2,  desc:'Components',             source:'default', path:'templates/Coversheet Components_Testing.pdf',          required:true  },
+    { order:3,  desc:'Fair Use Disclaimer',    source:'upload',  pattern:'$1-Fair+Use+Disclaimer-*.pdf',                      required:false },
+    { order:4,  desc:'Submission Form',        source:'upload',  pattern:'$1-POGIL?Activity?Submission?Form*.pdf',            required:true  },
+    { order:5,  desc:'Review Summary',         source:'upload',  pattern:'$1-Review?Summary*.pdf',                            required:true  },
+    { order:6,  desc:'Author Response Letter', source:'upload',  pattern:'$1-Feedback?Response?Letter-*.pdf',                 required:false },
+    { order:7,  desc:'Facilitation Guide',     source:'upload',  pattern:'$1-Facilitation?Guide-*.pdf',                       required:true  },
+    { order:8,  desc:'Activity',               source:'upload',  pattern:'$1-Activity-*.pdf',                                 required:true  },
+    { order:9,  desc:'Activity Key',           source:'upload',  pattern:'$1-Answer?Key-*.pdf',                               required:true  },
+    { order:10, desc:'Other File',             source:'upload',  pattern:'$1-Other-*.pdf',                                    required:false },
+    { order:11, desc:'Donation Page',          source:'default', path:'templates/Donation_page.pdf',                         required:true  },
+    { order:12, desc:'Application Rubric',     source:'default', path:'rubrics/2024_Application_Activity_Rubric.pdf',        required:true  },
+    { order:13, desc:'Process Skill Rubric',   source:'default', path:'rubrics/2021_Process_Rubric.pdf',                     required:true  },
+  ],
+  'lc-approved': [
+    { order:1,  desc:'Title Page',             source:'upload',  pattern:'$1-Title+Page-*.pdf',                               required:true  },
+    { order:2,  desc:'Copyright Page',         source:'default', path:'templates/Coversheet Components_Testing.pdf',          required:true  },
+    { order:3,  desc:'Introduction',           source:'upload',  pattern:'$1-Fair+Use+Disclaimer-*.pdf',                      required:false },
+    { order:4,  desc:'Facilitation Guide',     source:'upload',  pattern:'$1-Facilitation?Guide-*.pdf',                       required:true  },
+    { order:5,  desc:'Activity',               source:'upload',  pattern:'$1-Activity-*.pdf',                                 required:true  },
+    { order:6,  desc:'Activity Key',           source:'upload',  pattern:'$1-Answer?Key-*.pdf',                               required:true  },
+    { order:7,  desc:'Donation Page',          source:'default', path:'templates/Donation_page.pdf',                         required:true  },
+    { order:8,  desc:'Learning Cycle Rubric',  source:'default', path:'rubrics/2024_Learning_Cycle_Activity_Rubric.pdf',     required:true  },
+    { order:9,  desc:'Process Skill Rubric',   source:'default', path:'rubrics/2021_Process_Rubric.pdf',                     required:true  },
+  ],
+  'app-approved': [
+    { order:1,  desc:'Title Page',             source:'upload',  pattern:'$1-Title+Page-*.pdf',                               required:true  },
+    { order:2,  desc:'Copyright Page',         source:'default', path:'templates/Coversheet Components_Testing.pdf',          required:true  },
+    { order:3,  desc:'Introduction',           source:'upload',  pattern:'$1-Fair+Use+Disclaimer-*.pdf',                      required:false },
+    { order:4,  desc:'Facilitation Guide',     source:'upload',  pattern:'$1-Facilitation?Guide-*.pdf',                       required:true  },
+    { order:5,  desc:'Activity',               source:'upload',  pattern:'$1-Activity-*.pdf',                                 required:true  },
+    { order:6,  desc:'Activity Key',           source:'upload',  pattern:'$1-Answer?Key-*.pdf',                               required:true  },
+    { order:7,  desc:'Donation Page',          source:'default', path:'templates/Donation_page.pdf',                         required:true  },
+    { order:8,  desc:'Application Rubric',     source:'default', path:'rubrics/2024_Application_Activity_Rubric.pdf',        required:true  },
+    { order:9,  desc:'Process Skill Rubric',   source:'default', path:'rubrics/2021_Process_Rubric.pdf',                     required:true  },
+  ],
+};
 
-function loadSavedCredentials() {
-  const cid = localStorage.getItem('pdf_merge_client_id');
-  const ak = localStorage.getItem('pdf_merge_api_key');
-  if (cid && ak) {
-    CLIENT_ID = cid;
-    API_KEY = ak;
-    document.getElementById('client-id-input').value = cid;
-    document.getElementById('api-key-input').value = ak;
-    document.getElementById('config-panel').classList.remove('visible');
-    initGoogleAPIs();
-  }
-}
+// ─── Auth state ───────────────────────────────────────────────────────────────
+let tokenClient   = null;
+let accessToken   = null;
+let currentEmail  = null;
+let apiKey        = 'AIzaSyDVG6nr8eKq3edn_qolgwTiA9isx-I34mo';
 
-// ─── Google API Init ─────────────────────────────────────────────────────────
-function initGoogleAPIs() {
-  gapi.load('client:picker', async () => {
-    await gapi.client.init({ apiKey: API_KEY, discoveryDocs: [DISCOVERY_DOC] });
-    gapiInited = true;
-    maybeEnableAuth();
+// ─── Boot ─────────────────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  // Init Google Identity Services
+  google.accounts.id.initialize({
+    client_id: CLIENT_ID,
+    callback: () => {} // we use tokenClient flow, not the callback flow
   });
 
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CLIENT_ID,
     scope: SCOPES,
-    callback: (resp) => {
-      if (resp.error) { showStatus('Auth error: ' + resp.error, 'error'); return; }
-      isSignedIn = true;
-      updateAuthUI();
-      showStatus('Connected to Google Drive.', 'success');
-    }
+    callback: handleTokenResponse,
   });
-  gisInited = true;
-  maybeEnableAuth();
+
+  document.getElementById('google-signin-btn').disabled = false;
+  renderQueue();
+});
+
+// ─── Sign-in flow ──────────────────────────────────────────────────────────────
+function startSignIn() {
+  setLoginStatus('Signing in…', false, true);
+  tokenClient.requestAccessToken({ prompt: 'consent' });
 }
 
-function maybeEnableAuth() {
-  if (gapiInited && gisInited) {
-    document.getElementById('auth-btn').disabled = false;
-  }
-}
-
-function handleAuth() {
-  if (!CLIENT_ID) {
-    document.getElementById('config-panel').classList.add('visible');
-    showStatus('Enter your Google API credentials first.', 'error');
+async function handleTokenResponse(resp) {
+  if (resp.error) {
+    setLoginStatus('Sign-in failed: ' + resp.error, true);
     return;
   }
-  if (!isSignedIn) {
-    tokenClient.requestAccessToken({ prompt: 'consent' });
-  } else {
-    google.accounts.oauth2.revoke(gapi.client.getToken().access_token, () => {
-      gapi.client.setToken('');
-      isSignedIn = false;
-      driveFiles = [];
-      driveQueuedIds.clear();
-      document.getElementById('drive-file-list').style.display = 'none';
-      document.getElementById('drive-empty').style.display = 'flex';
-      updateAuthUI();
-      showStatus('Disconnected from Google Drive.', '');
-    });
-  }
-}
+  accessToken = resp.access_token;
+  setLoginStatus('Checking access…', false, true);
 
-function updateAuthUI() {
-  const btn = document.getElementById('auth-btn');
-  const label = document.getElementById('auth-label');
-  if (isSignedIn) {
-    btn.classList.add('connected');
-    label.textContent = 'Drive Connected ✓';
-  } else {
-    btn.classList.remove('connected');
-    label.textContent = 'Connect Google Drive';
-  }
-}
-
-// ─── Drive Picker ────────────────────────────────────────────────────────────
-function openDrivePicker() {
-  if (!isSignedIn) {
-    showStatus('Connect Google Drive first.', 'error');
-    return;
-  }
-  const token = gapi.client.getToken();
-  const picker = new google.picker.PickerBuilder()
-    .addView(new google.picker.DocsView(google.picker.ViewId.FOLDERS)
-      .setSelectFolderEnabled(true))
-    .setOAuthToken(token.access_token)
-    .setDeveloperKey(API_KEY)
-    .setCallback(pickerCallback)
-    .setTitle('Select a Drive folder containing PDFs')
-    .build();
-  picker.setVisible(true);
-}
-
-async function pickerCallback(data) {
-  if (data.action !== google.picker.Action.PICKED) return;
-  const folder = data.docs[0];
-  document.getElementById('drive-folder-name').textContent = folder.name;
-  showStatus('Loading PDFs from folder…', '');
-  await loadDriveFolder(folder.id);
-}
-
-async function loadDriveFolder(folderId) {
+  // Get user profile
   try {
-    const resp = await gapi.client.drive.files.list({
-      q: `'${folderId}' in parents and mimeType='application/pdf' and trashed=false`,
-      fields: 'files(id, name, size)',
-      pageSize: 100,
-      orderBy: 'name'
+    const profileResp = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: 'Bearer ' + accessToken }
     });
-    driveFiles = resp.result.files || [];
-    renderDriveFiles();
-    showStatus(`Found ${driveFiles.length} PDF(s) in folder.`, 'success');
+    const profile = await profileResp.json();
+    currentEmail = profile.email;
+
+    // Check spreadsheet access list
+    const allowed = await checkAccessList(currentEmail);
+    if (allowed) {
+      showMainApp(profile);
+    } else {
+      showAccessDenied(currentEmail);
+    }
   } catch (e) {
-    showStatus('Error loading Drive folder: ' + (e.result?.error?.message || e), 'error');
+    setLoginStatus('Error during sign-in: ' + e.message, true);
   }
 }
 
-function renderDriveFiles() {
-  const container = document.getElementById('drive-items');
-  container.innerHTML = '';
-  if (!driveFiles.length) {
-    container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:0.78rem;">No PDFs found in this folder.</div>';
+async function checkAccessList(email) {
+  if (!apiKey) {
+    // If no API key yet, show config panel and fail gracefully
+    document.getElementById('config-panel').classList.add('visible');
+    setLoginStatus('Enter your API key first, then try again.', true);
+    return false;
+  }
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_ID}/values/${encodeURIComponent(SHEETS_RANGE)}?key=${apiKey}`;
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`Sheets API error: ${resp.status}`);
+  const data = await resp.json();
+  const emails = (data.values || []).flat().map(e => e.trim().toLowerCase());
+  return emails.includes(email.toLowerCase());
+}
+
+function showMainApp(profile) {
+  document.getElementById('login-screen').style.display  = 'none';
+  document.getElementById('access-denied').style.display = 'none';
+  document.getElementById('main-app').classList.add('visible');
+
+  // Populate header user info
+  document.getElementById('user-info').classList.add('visible');
+  document.getElementById('user-name').textContent  = profile.name  || '';
+  document.getElementById('user-email').textContent = profile.email || '';
+  if (profile.picture) document.getElementById('user-avatar').src = profile.picture;
+}
+
+function showAccessDenied(email) {
+  document.getElementById('login-screen').style.display  = 'none';
+  document.getElementById('denied-email').textContent    = email;
+  document.getElementById('access-denied').style.display = 'flex';
+  accessToken = null;
+}
+
+function signOut() {
+  if (accessToken) google.accounts.oauth2.revoke(accessToken, () => {});
+  accessToken  = null;
+  currentEmail = null;
+  document.getElementById('main-app').classList.remove('visible');
+  document.getElementById('access-denied').style.display = 'none';
+  document.getElementById('login-screen').style.display  = 'flex';
+  document.getElementById('user-info').classList.remove('visible');
+  setLoginStatus('');
+  clearAll();
+}
+
+function setLoginStatus(msg, isError, isLoading) {
+  const el = document.getElementById('login-status');
+  el.className = isError ? 'error' : '';
+  el.innerHTML = isLoading
+    ? `<span class="spinner-dark" style="vertical-align:middle;margin-right:6px"></span>${msg}`
+    : msg;
+}
+
+// ─── Galley selector ──────────────────────────────────────────────────────────
+let selectedKind = null, selectedLevel = null;
+let slots = [], unmatchedFiles = [], submissionNum = null;
+
+function selectKind(k) {
+  selectedKind = k;
+  document.querySelectorAll('[id^="kind-"]').forEach(b => b.classList.remove('selected'));
+  document.getElementById('kind-' + k).classList.add('selected');
+  updateGalleyConfirm();
+}
+
+function selectLevel(l) {
+  selectedLevel = l;
+  document.querySelectorAll('[id^="level-"]').forEach(b => b.classList.remove('selected'));
+  document.getElementById('level-' + l).classList.add('selected');
+  updateGalleyConfirm();
+}
+
+function updateGalleyConfirm() {
+  const confirm = document.getElementById('galley-confirm');
+  const text    = document.getElementById('galley-confirm-text');
+  const tool    = document.getElementById('merge-tool');
+
+  if (selectedKind && selectedLevel) {
+    confirm.classList.remove('incomplete');
+    text.textContent = KIND_LABELS[selectedKind] + '  ·  ' + LEVEL_LABELS[selectedLevel];
+    tool.classList.remove('dimmed');
+    const key = selectedKind + '-' + selectedLevel;
+    slots = FORMULAS[key].map(f => ({ ...f, file: null, fileName: null, data: null }));
+    reMatchAllFiles();
+    document.getElementById('output-name').value =
+      KIND_SHORT[selectedKind] + '-' + LEVEL_SHORT[selectedLevel] + '-galley.pdf';
   } else {
-    driveFiles.forEach(f => {
-      const row = document.createElement('div');
-      row.className = 'drive-file-item';
-      row.innerHTML = `
-        <span class="drive-file-name">${escHtml(f.name)}</span>
-        <button class="drive-add-btn ${driveQueuedIds.has(f.id)?'added':''}" 
-                id="add-btn-${f.id}"
-                onclick="addDriveFileToQueue('${f.id}','${escHtml(f.name).replace(/'/g,"\\'")}')">
-          ${driveQueuedIds.has(f.id) ? '✓ added' : '+ add'}
-        </button>`;
-      container.appendChild(row);
-    });
+    confirm.classList.add('incomplete');
+    text.textContent = (!selectedKind && !selectedLevel)
+      ? 'Select both an activity kind and level above to continue.'
+      : (!selectedKind ? 'Select an activity kind to continue.' : 'Select an activity level to continue.');
+    tool.classList.add('dimmed');
+    slots = [];
   }
-  document.getElementById('drive-empty').style.display = 'none';
-  document.getElementById('drive-file-list').style.display = 'flex';
-}
-
-function addAllDriveFiles() {
-  driveFiles.forEach(f => {
-    if (!driveQueuedIds.has(f.id)) addDriveFileToQueue(f.id, f.name);
-  });
-}
-
-function addDriveFileToQueue(id, name) {
-  if (driveQueuedIds.has(id)) return;
-  driveQueuedIds.add(id);
-  mergeQueue.push({ id: 'drive_'+id, name, source: 'drive', data: null, driveId: id, pages: null });
-  const btn = document.getElementById('add-btn-' + id);
-  if (btn) { btn.textContent = '✓ added'; btn.classList.add('added'); }
   renderQueue();
 }
 
-// ─── Local File Handling ──────────────────────────────────────────────────────
-function handleDragOver(e) {
-  e.preventDefault();
-  document.getElementById('drop-zone').classList.add('drag-over');
+// ─── Pattern matching ──────────────────────────────────────────────────────────
+function patternToRegex(pattern, subNum) {
+  const withNum = pattern.replace('$1', subNum);
+  const regexStr = withNum
+    .replace(/[.[\]{}()|^$\\]/g, '\\$&')
+    .replace(/\?/g, '.')
+    .replace(/\*/g, '.*');
+  return new RegExp('^' + regexStr + '$', 'i');
 }
 
-function handleDragLeave(e) {
-  document.getElementById('drop-zone').classList.remove('drag-over');
+function extractSubmissionNum(filename) {
+  const m = filename.match(/^(\d+)-/);
+  return m ? m[1] : null;
 }
+
+function matchFileToSlot(filename, subNum) {
+  for (let i = 0; i < slots.length; i++) {
+    if (slots[i].source !== 'upload') continue;
+    if (patternToRegex(slots[i].pattern, subNum).test(filename)) return i;
+  }
+  return -1;
+}
+
+// ─── File handling ─────────────────────────────────────────────────────────────
+function handleDragOver(e) { e.preventDefault(); document.getElementById('drop-zone').classList.add('drag-over'); }
+function handleDragLeave()  { document.getElementById('drop-zone').classList.remove('drag-over'); }
 
 function handleDrop(e) {
   e.preventDefault();
   document.getElementById('drop-zone').classList.remove('drag-over');
-  const files = [...e.dataTransfer.files].filter(f => f.type === 'application/pdf' || f.name.endsWith('.pdf'));
+  const files = [...e.dataTransfer.files].filter(f => f.name.endsWith('.pdf'));
   if (!files.length) { showStatus('Only PDF files are accepted.', 'error'); return; }
-  files.forEach(readLocalFile);
+  processFiles(files);
 }
 
 function handleFileInput(e) {
-  [...e.target.files].forEach(readLocalFile);
+  processFiles([...e.target.files].filter(f => f.name.endsWith('.pdf')));
   e.target.value = '';
 }
 
-function readLocalFile(file) {
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    mergeQueue.push({
-      id: 'local_' + Date.now() + '_' + Math.random(),
-      name: file.name,
-      source: 'local',
-      data: e.target.result,
-      driveId: null,
-      pages: null
-    });
-    renderQueue();
-    // Count pages async
-    countPages(mergeQueue[mergeQueue.length - 1]);
-  };
-  reader.readAsArrayBuffer(file);
+function processFiles(files) {
+  const nums = [...new Set(files.map(f => extractSubmissionNum(f.name)).filter(Boolean))];
+  if (nums.length > 1) {
+    showSubmissionBanner(`Conflicting submission numbers: ${nums.join(', ')}. All files must share the same number.`, true);
+    return;
+  }
+  const detected = nums[0] || null;
+  if (submissionNum && detected && detected !== submissionNum) {
+    showSubmissionBanner(`Files have submission number ${detected} but existing files use ${submissionNum}. Clear uploads first.`, true);
+    return;
+  }
+  if (detected) submissionNum = detected;
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => assignFile(file.name, e.target.result);
+    reader.readAsArrayBuffer(file);
+  });
 }
 
-async function countPages(item) {
-  try {
-    const pdfDoc = await PDFLib.PDFDocument.load(item.data);
-    item.pages = pdfDoc.getPageCount();
-    renderQueue();
-  } catch {}
+function assignFile(filename, data) {
+  if (!submissionNum) { unmatchedFiles.push(filename); renderQueue(); return; }
+  const idx = matchFileToSlot(filename, submissionNum);
+  if (idx === -1) {
+    if (!unmatchedFiles.includes(filename)) unmatchedFiles.push(filename);
+  } else {
+    slots[idx].file = true; slots[idx].data = data; slots[idx].fileName = filename;
+  }
+  updateSubmissionBanner();
+  renderQueue();
 }
 
-// ─── Queue Rendering ─────────────────────────────────────────────────────────
+function reMatchAllFiles() {
+  const existing = slots.filter(s => s.source === 'upload' && s.data).map(s => ({ name: s.fileName, data: s.data }));
+  slots.forEach(s => { if (s.source === 'upload') { s.file = null; s.data = null; s.fileName = null; } });
+  unmatchedFiles = [];
+  existing.forEach(f => {
+    const idx = matchFileToSlot(f.name, submissionNum);
+    if (idx === -1) unmatchedFiles.push(f.name);
+    else { slots[idx].file = true; slots[idx].data = f.data; slots[idx].fileName = f.name; }
+  });
+}
+
+function removeSlotFile(idx) {
+  slots[idx].file = null; slots[idx].data = null; slots[idx].fileName = null;
+  updateSubmissionBanner(); renderQueue();
+}
+
+function clearAll() {
+  slots.forEach(s => { if (s.source === 'upload') { s.file = null; s.data = null; s.fileName = null; } });
+  unmatchedFiles = []; submissionNum = null;
+  document.getElementById('submission-banner').style.display = 'none';
+  renderQueue();
+}
+
+function updateSubmissionBanner() {
+  if (submissionNum) showSubmissionBanner(`Submission #${submissionNum} detected`, false);
+}
+
+function showSubmissionBanner(msg, isError) {
+  const el = document.getElementById('submission-banner');
+  el.textContent = (isError ? '⚠ ' : '✓ ') + msg;
+  el.className   = 'submission-banner visible' + (isError ? ' error' : '');
+  el.style.display = 'flex';
+}
+
+// ─── Queue rendering ───────────────────────────────────────────────────────────
 function renderQueue() {
-  const list = document.getElementById('queue-list');
-  const empty = document.getElementById('queue-empty');
-  const badge = document.getElementById('queue-badge');
-  const mergeBtn = document.getElementById('merge-btn');
-  const info = document.getElementById('file-count-info');
+  const container = document.getElementById('structured-queue');
+  const badge     = document.getElementById('queue-badge');
+  const mergeBtn  = document.getElementById('merge-btn');
+  const info      = document.getElementById('file-count-info');
 
-  if (!mergeQueue.length) {
-    empty.style.display = 'block';
-    list.innerHTML = '';
-    badge.textContent = '0 files';
-    mergeBtn.disabled = true;
-    info.textContent = '';
+  const unmatchedSec  = document.getElementById('unmatched-section');
+  const unmatchedList = document.getElementById('unmatched-list');
+  if (unmatchedFiles.length) {
+    unmatchedSec.classList.add('visible');
+    unmatchedList.innerHTML = unmatchedFiles.map(f => `<li>${escHtml(f)}</li>`).join('');
+  } else {
+    unmatchedSec.classList.remove('visible');
+  }
+
+  if (!slots.length) {
+    container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:0.82rem;">Select an activity kind and level above to see the galley structure.</div>';
+    badge.textContent = '0 files ready'; mergeBtn.disabled = true; info.textContent = '';
     return;
   }
 
-  empty.style.display = 'none';
-  badge.textContent = mergeQueue.length + ' file' + (mergeQueue.length !== 1 ? 's' : '');
-  mergeBtn.disabled = false;
-  info.textContent = mergeQueue.length + ' PDF' + (mergeQueue.length !== 1 ? 's' : '') + ' queued';
+  let readyCount = 0, missingRequired = 0;
+  slots.forEach(s => {
+    if (s.source === 'default' || s.file) readyCount++;
+    if (s.source === 'upload' && s.required && !s.file) missingRequired++;
+  });
 
-  list.innerHTML = '';
-  mergeQueue.forEach((item, idx) => {
-    const row = document.createElement('div');
-    row.className = 'file-item';
-    row.draggable = true;
-    row.dataset.index = idx;
+  badge.textContent = readyCount + ' / ' + slots.length + ' slots filled';
+  mergeBtn.disabled = missingRequired > 0;
+  info.textContent  = missingRequired > 0
+    ? `${missingRequired} required file${missingRequired > 1 ? 's' : ''} missing`
+    : '';
 
-    row.innerHTML = `
-      <span class="drag-handle">⠿</span>
-      <span class="file-num">${idx + 1}</span>
-      <span class="file-name">${escHtml(item.name)}</span>
-      <span class="file-source ${item.source}">${item.source === 'local' ? 'LOCAL' : 'DRIVE'}</span>
-      ${item.pages !== null ? `<span class="file-pages">${item.pages}p</span>` : ''}
-      <button class="remove-btn" onclick="removeFromQueue(${idx})" title="Remove">✕</button>`;
+  container.innerHTML = '';
+  slots.forEach((slot, idx) => {
+    const row  = document.createElement('div');
+    row.className = 'queue-slot';
 
-    row.addEventListener('dragstart', () => { dragSrcIndex = idx; row.classList.add('dragging'); });
-    row.addEventListener('dragend', () => row.classList.remove('dragging'));
-    row.addEventListener('dragover', e => { e.preventDefault(); });
-    row.addEventListener('drop', e => {
-      e.preventDefault();
-      if (dragSrcIndex === null || dragSrcIndex === idx) return;
-      const moved = mergeQueue.splice(dragSrcIndex, 1)[0];
-      mergeQueue.splice(idx, 0, moved);
-      dragSrcIndex = null;
-      renderQueue();
-    });
+    const orderEl = document.createElement('div');
+    orderEl.className = 'slot-order';
+    orderEl.textContent = slot.order;
+    row.appendChild(orderEl);
 
-    list.appendChild(row);
+    const body = document.createElement('div');
+    body.className = 'slot-body';
+
+    const desc = document.createElement('div');
+    desc.className = 'slot-desc';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'slot-name';
+    nameEl.textContent = slot.desc;
+    desc.appendChild(nameEl);
+
+    const subEl = document.createElement('div');
+    subEl.className = 'slot-filename';
+    if (slot.source === 'default') {
+      subEl.textContent = slot.path.split('/').pop();
+    } else if (slot.fileName) {
+      subEl.textContent = slot.fileName;
+    } else {
+      subEl.textContent = slot.pattern
+        ? slot.pattern.replace('$1', submissionNum || '###')
+        : '';
+    }
+    desc.appendChild(subEl);
+    body.appendChild(desc);
+
+    // Tag
+    let tagText, tagClass;
+    if (slot.source === 'default')        { tagText = 'DEFAULT';    tagClass = 'default';  }
+    else if (slot.file)                   { tagText = '✓ MATCHED';  tagClass = 'matched';  }
+    else if (slot.required)               { tagText = 'REQUIRED';   tagClass = 'missing';  }
+    else                                  { tagText = 'OPTIONAL';   tagClass = 'optional'; }
+
+    const tag = document.createElement('span');
+    tag.className = 'slot-tag ' + tagClass;
+    tag.textContent = tagText;
+    body.appendChild(tag);
+    row.appendChild(body);
+
+    if (slot.source === 'upload' && slot.file) {
+      const action = document.createElement('div');
+      action.className = 'slot-action';
+      const btn = document.createElement('button');
+      btn.className = 'slot-remove-btn'; btn.title = 'Remove'; btn.textContent = '✕';
+      btn.onclick = () => removeSlotFile(idx);
+      action.appendChild(btn); row.appendChild(action);
+    }
+
+    container.appendChild(row);
   });
 }
 
-function removeFromQueue(idx) {
-  const item = mergeQueue[idx];
-  if (item.source === 'drive') {
-    driveQueuedIds.delete(item.driveId);
-    const btn = document.getElementById('add-btn-' + item.driveId);
-    if (btn) { btn.textContent = '+ add'; btn.classList.remove('added'); }
-  }
-  mergeQueue.splice(idx, 1);
-  renderQueue();
-}
-
-function clearQueue() {
-  mergeQueue = [];
-  driveQueuedIds.clear();
-  renderDriveFileButtons();
-  renderQueue();
-}
-
-function renderDriveFileButtons() {
-  driveFiles.forEach(f => {
-    const btn = document.getElementById('add-btn-' + f.id);
-    if (btn) { btn.textContent = '+ add'; btn.classList.remove('added'); }
-  });
-}
-
-// ─── PDF Merging ─────────────────────────────────────────────────────────────
+// ─── PDF merging ───────────────────────────────────────────────────────────────
 async function mergePDFs() {
-  if (!mergeQueue.length) return;
-
   const btn = document.getElementById('merge-btn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Merging…';
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Merging…';
   showStatus('Preparing files…', '');
 
   try {
     const mergedPdf = await PDFLib.PDFDocument.create();
-
-    for (let i = 0; i < mergeQueue.length; i++) {
-      const item = mergeQueue[i];
-      showStatus(`Processing ${i + 1} / ${mergeQueue.length}: ${item.name}`, '');
-
-      let arrayBuffer;
-      if (item.source === 'local') {
-        arrayBuffer = item.data;
-      } else {
-        // Fetch from Drive
-        arrayBuffer = await fetchDriveFile(item.driveId);
+    for (let i = 0; i < slots.length; i++) {
+      const slot = slots[i];
+      if (slot.source === 'upload' && !slot.file) {
+        if (!slot.required) continue;
+        throw new Error(`Required file missing: ${slot.desc}`);
       }
-
-      const srcPdf = await PDFLib.PDFDocument.load(arrayBuffer);
-      const pages = await mergedPdf.copyPages(srcPdf, srcPdf.getPageIndices());
+      showStatus(`Processing ${i + 1} / ${slots.length}: ${slot.desc}…`, '');
+      let buf;
+      if (slot.source === 'default') {
+        const resp = await fetch(GITHUB_BASE + slot.path);
+        if (!resp.ok) throw new Error(`Failed to fetch: ${slot.path} (${resp.status})`);
+        buf = await resp.arrayBuffer();
+      } else {
+        buf = slot.data;
+      }
+      const src   = await PDFLib.PDFDocument.load(buf);
+      const pages = await mergedPdf.copyPages(src, src.getPageIndices());
       pages.forEach(p => mergedPdf.addPage(p));
     }
 
     showStatus('Generating output PDF…', '');
-    const bytes = await mergedPdf.save();
-    const blob = new Blob([bytes], { type: 'application/pdf' });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement('a');
-    a.href = url;
-    const filename = document.getElementById('output-name').value.trim() || 'merged-output.pdf';
-    a.download = filename.endsWith('.pdf') ? filename : filename + '.pdf';
+    const bytes    = await mergedPdf.save();
+    const blob     = new Blob([bytes], { type: 'application/pdf' });
+    const url      = URL.createObjectURL(blob);
+    const a        = document.createElement('a');
+    a.href         = url;
+    const filename = document.getElementById('output-name').value.trim() || 'galley.pdf';
+    a.download     = filename.endsWith('.pdf') ? filename : filename + '.pdf';
     a.click();
     URL.revokeObjectURL(url);
-
-    const totalPages = mergeQueue.reduce((acc, item) => acc + (item.pages || 0), 0);
-    showStatus(`✓ Done! Merged ${mergeQueue.length} PDFs${totalPages ? ' (' + totalPages + ' pages total)' : ''} → ${a.download}`, 'success');
+    showStatus(`✓ Done! Galley proof downloaded as ${a.download}`, 'success');
   } catch (e) {
     showStatus('Merge failed: ' + e.message, 'error');
     console.error(e);
   }
-
-  btn.disabled = false;
-  btn.innerHTML = '⬇ Merge &amp; Download';
+  btn.disabled = false; btn.innerHTML = '⬇ Merge &amp; Download';
 }
 
-async function fetchDriveFile(fileId) {
-  const token = gapi.client.getToken();
-  const resp = await fetch(
-    `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
-    { headers: { Authorization: 'Bearer ' + token.access_token } }
-  );
-  if (!resp.ok) throw new Error(`Drive fetch failed for ${fileId}: ${resp.status}`);
-  return resp.arrayBuffer();
-}
-
-// ─── Utilities ───────────────────────────────────────────────────────────────
+// ─── Utilities ─────────────────────────────────────────────────────────────────
 function showStatus(msg, type) {
   const bar = document.getElementById('status-bar');
   bar.textContent = msg;
@@ -1162,11 +1050,6 @@ function showStatus(msg, type) {
 function escHtml(str) {
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
-
-// ─── Boot ────────────────────────────────────────────────────────────────────
-window.addEventListener('load', () => {
-  loadSavedCredentials();
-});
 </script>
 </body>
 </html>
