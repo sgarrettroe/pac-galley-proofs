@@ -781,8 +781,7 @@ function updateGalleyConfirm() {
     const key = selectedKind + '-' + selectedLevel;
     slots = FORMULAS[key].map(f => ({ ...f, file: null, fileName: null, data: null }));
     reMatchAllFiles();
-    document.getElementById('output-name').value =
-      KIND_SHORT[selectedKind] + '-' + LEVEL_SHORT[selectedLevel] + '-galley.pdf';
+    updateOutputFilename();
   } else {
     confirm.classList.add('incomplete');
     text.textContent = (!selectedKind && !selectedLevel)
@@ -792,6 +791,14 @@ function updateGalleyConfirm() {
     slots = [];
   }
   renderQueue();
+}
+
+// -- Output file name ----
+function updateOutputFilename() {
+  if (!selectedKind || !selectedLevel) return;
+  const prefix = submissionNum ? submissionNum + '-' : '';
+  document.getElementById('output-name').value =
+    prefix + KIND_SHORT[selectedKind] + '-' + LEVEL_SHORT[selectedLevel] + '-galley.pdf';
 }
 
 // ─── Pattern matching ──────────────────────────────────────────────────────────
@@ -862,6 +869,7 @@ function assignFile(filename, data) {
     slots[idx].file = true; slots[idx].data = data; slots[idx].fileName = filename;
   }
   updateSubmissionBanner();
+  updateOutputFilename();
   renderQueue();
 }
 
@@ -884,6 +892,7 @@ function removeSlotFile(idx) {
 function clearAll() {
   slots.forEach(s => { if (s.source === 'upload') { s.file = null; s.data = null; s.fileName = null; } });
   unmatchedFiles = []; submissionNum = null;
+  updateOutputFilename();
   document.getElementById('submission-banner').style.display = 'none';
   renderQueue();
 }
